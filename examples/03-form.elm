@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (Html, div, input, button, text, br)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onClick)
+import Char exposing (isUpper)
 
 
 main =
@@ -17,17 +18,22 @@ main =
 -- MODEL
 
 
+type alias ValidationMessage =
+    ( String, String )
+
+
 type alias Model =
     { name : String
     , password : String
     , passwordAgain : String
     , age : Int
+    , validation : Maybe ValidationMessage
     }
 
 
 model : Model
 model =
-    Model "" "" "" -1
+    Model "" "" "" -1 Nothing
 
 
 
@@ -58,7 +64,20 @@ update msg model =
             { model | age = Result.withDefault -1 (String.toInt ageEntered) }
 
         Validate ->
-            Debug.crash "Validate button hasn't been implemented"
+            let
+                vm =
+                    if String.length model.name < 3 then
+                        ( "red", "Name must be longer than 3" )
+                    else if not (String.any isUpper model.name) then
+                        ( "red", "At least one character must be uppercase" )
+                    else if model.password /= model.passwordAgain then
+                        ( "red", "Passwords do not match" )
+                    else if model.age < 0 then
+                        ( "red", "Age is invalid" )
+                    else
+                        ( "green", "OK" )
+            in
+                { model | validation = Just vm }
 
 
 
@@ -74,17 +93,15 @@ view model =
         , input [ type_ "password", placeholder "Re-enter Password", onInput PasswordAgain ] []
         , input [ type_ "number", placeholder "Age", onInput Age ] []
         , button [ onClick Validate ] [ text "VALIDATE!!!" ]
-        , viewValidation model
+        , viewValidation model.validation
         ]
 
 
-viewValidation : Model -> Html msg
-viewValidation model =
-    let
-        ( color, message ) =
-            if model.password == model.passwordAgain then
-                ( "green", "OK" )
-            else
-                ( "red", "Passwords do not match!" )
-    in
-        div [ style [ ( "color", color ) ] ] [ text message ]
+viewValidation : Maybe ValidationMessage -> Html msg
+viewValidation validation =
+    case validation of
+        Nothing ->
+            div [] []
+
+        Just ( color, message ) ->
+            div [ style [ ( "color", color ) ] ] [ text message ]
